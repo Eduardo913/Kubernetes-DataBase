@@ -1,0 +1,471 @@
+#*****************************Namespace*****************************
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: bdovilla-namespace
+
+#*****************************Postgresql*****************************
+---
+# deploy
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-deployment
+  namespace: bdovilla-namespace
+  labels:
+    app: postgres-server
+spec:
+  selector:
+    matchLabels:
+      app: postgres-server
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: postgres-server
+    spec:
+      containers:
+        - image: postgres:11 
+          name: postgres-db1
+          ports:
+            - containerPort: 5432
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: postgres-db-volume1
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-configmap
+                  key: postgres.password
+            - name: POSTGRES_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-configmap
+                  key: postgres.user
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-configmap
+                  key: postgres.db
+          envFrom:
+            - configMapRef:
+                name: postgres-configmap
+      volumes:
+        - name: postgres-db-volume1
+          persistentVolumeClaim:
+            claimName: pvc-postgresql-claim
+# service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-postgresql
+  namespace: bdovilla-namespace
+spec:
+  selector:
+    app: postgres-server 
+  type: LoadBalancer
+  ports:
+  - port: 5300
+    targetPort: 5432
+#pv
+---
+apiVersion: v1
+kind: PersistentVolume 
+metadata:
+  name: pv-postgresql-vol
+  namespace: bdovilla-namespace
+spec: 
+  storageClassName: postgresql  
+  capacity:
+    storage: 10Gi 
+  accessModes:
+    - ReadWriteMany 
+  hostPath:
+    path: "/mnt/postgresql-vol" 
+#pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-postgresql-claim
+  namespace: bdovilla-namespace
+spec:
+  storageClassName: postgresql 
+  accessModes:
+    - ReadWriteMany
+  resources: 
+    requests:
+      storage: 5Gi
+#storageclass
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: postgresql
+  namespace: bdovilla-namespace
+provisioner: kubernetes.io/no-provisioner 
+reclaimPolicy: Retain 
+volumeBindingMode: WaitForFirstConsumer
+# configMap
+---
+kind: ConfigMap 
+apiVersion: v1 
+metadata:
+  name: postgres-configmap 
+  namespace: bdovilla-namespace
+data: 
+  postgres.password: "Eduardo93"
+  postgres.user: "eduardo"
+  postgres.db: "bdov"
+#*****************************MONGO*****************************
+---
+# deploy
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo-deployment
+  namespace: bdovilla-namespace
+  labels:
+    app: mongo-server
+spec:
+  selector:
+    matchLabels:
+      app: mongo-server
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: mongo-server
+    spec:
+      containers:
+        - image: mongo:4.2.2 
+          name: mongo-db1
+          ports:
+            - containerPort: 27017
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /data/db
+              name: mongo-db-volume1
+          env:
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              valueFrom:
+                configMapKeyRef:
+                  name: mongo-configmap
+                  key: mongo.password
+            - name: MONGO_INITDB_ROOT_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: mongo-configmap
+                  key: mongo.user
+            - name: MONGO_INITDB_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: mongo-configmap
+                  key: mongo.db
+          envFrom:
+            - configMapRef:
+                name: mongo-configmap
+      volumes:
+        - name: mongo-db-volume1
+          persistentVolumeClaim:
+            claimName: pvc-mongo-claim
+---
+# service
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-mongo
+  namespace: bdovilla-namespace
+spec:
+  selector:
+    app: mongo-server 
+  type: LoadBalancer
+  ports:
+  - port: 5302
+    targetPort: 27017
+
+---
+#pv
+apiVersion: v1
+kind: PersistentVolume 
+metadata:
+  name: pv-mongo-vol
+  namespace: bdovilla-namespace
+spec: 
+  storageClassName: mongo  
+  capacity:
+    storage: 10Gi 
+  accessModes:
+    - ReadWriteMany 
+  hostPath:
+    path: "/mnt/mongo-vol" 
+
+---
+#pvc
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-mongo-claim
+  namespace: bdovilla-namespace
+spec:
+  storageClassName: mongo 
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 5Gi
+---
+#storageclass
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: mongo
+  namespace: bdovilla-namespace
+provisioner: kubernetes.io/no-provisioner 
+reclaimPolicy: Retain 
+volumeBindingMode: WaitForFirstConsumer
+---
+# configMap
+kind: ConfigMap 
+apiVersion: v1 
+metadata:
+  name: mongo-configmap 
+  namespace: bdovilla-namespace
+data: 
+  mongo.password: "Eduardo93"
+  mongo.user: "eduardo"
+  mongo.db: "bdov"
+
+#*****************************REDIS*****************************
+---
+#pv
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-redis-vol
+  namespace: bdovilla-namespace
+spec: 
+  storageClassName: redis
+  capacity:
+    storage: 10Gi 
+  accessModes:
+    - ReadWriteMany 
+  hostPath:
+    path: "/mnt/redis-vol1" 
+---
+#storageclass
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: redis
+  namespace: bdovilla-namespace
+provisioner: kubernetes.io/no-provisioner 
+reclaimPolicy: Retain 
+volumeBindingMode: WaitForFirstConsumer
+---
+#deploy
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-deployment
+  namespace: bdovilla-namespace
+  labels:
+    app: redis-server
+spec:
+  selector:
+    matchLabels:
+      app: redis-server
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: redis-server
+    spec:
+      containers:
+      - image: redis:latest  
+        name: redis-db1
+        ports:
+        - containerPort: 6379
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /data
+          name: redis-db-volume1
+        env:
+          - name: REDIS_MASTER_PASSWORD
+            valueFrom:
+              configMapKeyRef:
+                name: redis-configmap
+                key: redis.password 
+          - name: REDIS_USER
+            valueFrom:
+              configMapKeyRef:
+                name: redis-configmap
+                key: redis.user
+          - name: REDIS_DB
+            valueFrom:
+              configMapKeyRef:
+                name: redis-configmap
+                key: redis.db
+      volumes:
+      - name: redis-db-volume1
+        persistentVolumeClaim:
+           claimName: pvc-redis-claim
+---
+#configmap
+apiVersion: v1 
+kind: ConfigMap 
+metadata:
+  name: redis-configmap 
+  namespace: bdovilla-namespace
+data: 
+  redis.password: Eduardo93
+  redis.user: eduardo
+  redis.db: bdov
+---
+#pvc
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-redis-claim
+  namespace: bdovilla-namespace
+spec:
+  storageClassName: redis
+  accessModes:
+    - ReadWriteMany
+  resources: 
+    requests:
+      storage: 5Gi
+---
+
+#service
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-redis
+  namespace: bdovilla-namespace
+spec:
+  selector:
+    app: redis-server
+  ports:
+    - port: 5031 
+      targetPort: 6379 
+      protocol: TCP 
+  type: LoadBalancer 
+
+#*****************************MYSQL*****************************
+---
+#pv
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-mysql-vol
+  namespace: bdovilla-namespace
+spec: 
+  storageClassName: mysql
+  capacity:
+    storage: 10Gi 
+  accessModes:
+    - ReadWriteMany 
+  hostPath:
+    path: "/mnt/mysql-vol1" 
+---
+
+#storageclass
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: mysql
+  namespace: bdovilla-namespace
+provisioner: kubernetes.io/no-provisioner 
+reclaimPolicy: Retain 
+volumeBindingMode: WaitForFirstConsumer
+---
+
+#pvc
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-mysql-claim
+  namespace: bdovilla-namespace
+spec:
+  storageClassName: mysql
+  accessModes:
+    - ReadWriteMany
+  resources: 
+    requests:
+      storage: 5Gi
+
+---
+
+#deploy
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-deployment
+  namespace: bdovilla-namespace
+  labels:
+    app: mysql-server
+spec:
+  selector:
+    matchLabels:
+      app: mysql-server
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: mysql-server
+    spec:
+      containers:
+      - image: mysql:5.6  
+        name: mysql-db1
+        ports:
+        - containerPort: 3306
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /var/lib/mysql
+          name: mysql-db-volume1
+        env:
+          - name: MYSQL_PASSWORD
+            valueFrom:
+              configMapKeyRef:
+                name: mysql-configmap
+                key: mysql.password 
+          - name: MYSQL_DATABASE
+            valueFrom:
+              configMapKeyRef:
+                name: mysql-configmap
+                key: mysql.db
+      volumes:
+      - name: mysql-db-volume1
+        persistentVolumeClaim:
+           claimName: pvc-mysql-claim
+---
+
+#configmap
+apiVersion: v1 
+kind: ConfigMap 
+metadata:
+  name: mysql-configmap 
+  namespace: bdovilla-namespace
+data: 
+  mysql.password: "Eduardo93"
+  mysql.db: "bdov"
+---
+
+#service
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-mysql
+  namespace: bdovilla-namespace
+spec:
+  selector:
+    app: mysql-server 
+  ports:  
+    - port: 5303 
+      targetPort: 6379 
+      protocol: TCP 
+  type: LoadBalancer 

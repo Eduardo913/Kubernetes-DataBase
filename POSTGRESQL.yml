@@ -1,0 +1,114 @@
+# deploy
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-deployment
+  namespace: bdovilla-namespace
+  labels:
+    app: postgres-server
+spec:
+  selector:
+    matchLabels:
+      app: postgres-server
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: postgres-server
+    spec:
+      containers:
+        - image: postgres:11 
+          name: postgres-db1
+          ports:
+            - containerPort: 5432
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: postgres-db-volume1
+          env:
+            - name: POSTGRES_PASSWORD
+              vualeFrom:
+                configMapKeyRef:
+                  name: postgres-configmap
+                  key: postgres.password
+            - name: POSTGRES_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-configmap
+                  key: postgres.user
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: postgres-configmap
+                  key: postgres.db
+          envFrom:
+            - configMapRef:
+                name: postgres-configmap
+      volumes:
+        - name: postgres-db-volume1
+          persistentVolumeClaim:
+            claimName: pvc-postgresql-claim
+# service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-postgresql
+  namespace: bdovilla-namespace
+spec:
+  selector:
+    app: postgres-server #pendiente
+  type: LoadBalancer
+  ports:
+  - port: 5300
+    targetPort: 5432
+#pv
+---
+apiVersion: v1
+kind: PersistentVolume #espacio en el que vivira
+metadata:
+  name: pv-postgresql-vol
+  namespace: bdovilla-namespace
+spec: #Configuración de lo que va a contruir a nivel de disco
+  storageClassName: postgresql  #pendiente
+  capacity:
+    storage: 10Gi # Capacidad
+  accessModes:
+    - ReadWriteMany # Lectura y escritura
+  hostPath:
+    path: "/mnt/postgresql-vol" # Lugar donde guardara los datos
+#pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-postgresql-claim
+  namespace: bdovilla-namespace
+spec:
+  storageClassName: postgresql #pendiente
+  accessModes:
+    - ReadWriteMany
+  resources: #Configuración de lo que va a reclamar
+    requests:
+      storage: 5Gi
+#manejar su storege class
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: postgresql
+  namespace: bdovilla-namespace
+provisioner: kubernetes.io/no-provisioner # no-provisioner -> Entorno de de infraestructura local
+reclaimPolicy: Retain # Que realizara con mis datos // preserva la integridad de mis datos
+volumeBindingMode: WaitForFirstConsumer
+# configMap
+---
+kind: ConfigMap 
+apiVersion: v1 
+metadata:
+  name: postgres-configmap 
+  namespace: bdovilla-namespace
+data: # Configuration values can be set as key-value properties
+  postgres.password: "Eduardo93"
+  postgres.user: "eduardo"
+  postgres.db: "bdov"

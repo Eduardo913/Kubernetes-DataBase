@@ -1,0 +1,116 @@
+#pvc
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-redis-vol
+  namespace: bdovilla-namespace
+spec: 
+  storageClassName: redis
+  capacity:
+    storage: 10Gi 
+  accessModes:
+    - ReadWriteMany 
+  hostPath:
+    path: "/mnt/redis-vol1" 
+---
+
+#storageclass
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: redis
+  namespace: bdovilla-namespace
+provisioner: kubernetes.io/no-provisioner 
+reclaimPolicy: Retain 
+volumeBindingMode: WaitForFirstConsumer
+---
+
+#deploy
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-deployment
+  namespace: bdovilla-namespace
+  labels:
+    app: redis-server
+spec:
+  selector:
+    matchLabels:
+      app: redis-server
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: redis-server
+    spec:
+      containers:
+      - image: redis:6  
+        name: redis-db1
+        ports:
+        - containerPort: 6379
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /data
+          name: redis-db-volume1
+        env:
+          - name: REDIS_PASSWORD
+            valueFrom:
+              configMapKeyRef:
+                name: redis-configmap
+                key: redis.password 
+          - name: REDIS_USER
+            valueFrom:
+              configMapKeyRef:
+                name: redis-configmap
+                key: redis.user
+          - name: REDIS_DB
+            valueFrom:
+              configMapKeyRef:
+                name: redis-configmap
+                key: redis.db
+      volumes:
+      - name: redis-db-volume1
+        persistentVolumeClaim:
+           claimName: pvc-redis-claim
+---
+
+#configmap
+apiVersion: v1 
+kind: ConfigMap 
+metadata:
+  name: redis-configmap 
+  namespace: bdovilla-namespace
+data: 
+  redis.password: Eduardo93
+  redis.user: eduardo
+  redis.db: bdov
+---
+
+#pvc
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-redis-claim
+  namespace: bdovilla-namespace
+spec:
+  storageClassName: redis
+  accessModes:
+    - ReadWriteMany
+  resources: 
+    requests:
+      storage: 5Gi
+---
+
+#service
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-redis
+  namespace: bdovilla-namespace
+spec:
+  selector:
+    app: redis-server
+    - port: 5031 
+      targetPort: 6379 
+      protocol: TCP 
+  type: LoadBalancer 
