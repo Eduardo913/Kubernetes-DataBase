@@ -89,7 +89,7 @@ metadata:
 spec:
   storageClassName: mysql
   accessModes:
-    - ReadWri
+    - ReadWriteMany
     requests:
       storage: 5Gi
 ---

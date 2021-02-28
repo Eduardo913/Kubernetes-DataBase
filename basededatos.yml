@@ -82,7 +82,7 @@ spec:
   capacity:
     storage: 10Gi 
   accessModes:
-    - ReadWriteMany 
+    - ReadWriteOnce 
   hostPath:
     path: "/mnt/postgresql-vol" 
 #pvc
@@ -95,7 +95,7 @@ metadata:
 spec:
   storageClassName: postgresql 
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   resources: 
     requests:
       storage: 5Gi
@@ -199,7 +199,7 @@ spec:
   capacity:
     storage: 10Gi 
   accessModes:
-    - ReadWriteMany 
+    - ReadWriteOnce 
   hostPath:
     path: "/mnt/mongo-vol" 
 
@@ -213,7 +213,7 @@ metadata:
 spec:
   storageClassName: mongo 
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   resources:
     requests:
       storage: 5Gi
@@ -252,7 +252,7 @@ spec:
   capacity:
     storage: 10Gi 
   accessModes:
-    - ReadWriteMany 
+    - ReadWriteOnce 
   hostPath:
     path: "/mnt/redis-vol1" 
 ---
@@ -334,7 +334,7 @@ metadata:
 spec:
   storageClassName: redis
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   resources: 
     requests:
       storage: 5Gi
@@ -368,7 +368,7 @@ spec:
   capacity:
     storage: 10Gi 
   accessModes:
-    - ReadWriteMany 
+    - ReadWriteOnce 
   hostPath:
     path: "/mnt/mysql-vol1" 
 ---
@@ -393,7 +393,7 @@ metadata:
 spec:
   storageClassName: mysql
   accessModes:
-    - ReadWriteMany
+    - ReadWriteOnce
   resources: 
     requests:
       storage: 5Gi
@@ -428,7 +428,7 @@ spec:
         - mountPath: /var/lib/mysql
           name: mysql-db-volume1
         env:
-          - name: MYSQL_PASSWORD
+          - name: MYSQL_ROOT_PASSWORD
             valueFrom:
               configMapKeyRef:
                 name: mysql-configmap
@@ -466,6 +466,6 @@ spec:
     app: mysql-server 
   ports:  
     - port: 5303 
-      targetPort: 6379 
+      targetPort: 3306 
       protocol: TCP 
   type: LoadBalancer 
