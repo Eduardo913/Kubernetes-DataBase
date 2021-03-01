@@ -1,3 +1,4 @@
+---
 # deploy
 apiVersion: apps/v1
 kind: Deployment
@@ -17,7 +18,7 @@ spec:
         app: mongo-server
     spec:
       containers:
-        - image: mongo:4.2.2
+        - image: mongo:4.2.2 
           name: mongo-db1
           ports:
             - containerPort: 27017
@@ -26,12 +27,12 @@ spec:
             - mountPath: /data/db
               name: mongo-db-volume1
           env:
-            - name: MONGODB_PASSWORD
+            - name: MONGO_INITDB_ROOT_PASSWORD
               valueFrom:
                 configMapKeyRef:
                   name: mongo-configmap
                   key: mongo.password
-            - name: MONGODB_USER
+            - name: MONGO_INITDB_ROOT_USERNAME
               valueFrom:
                 configMapKeyRef:
                   name: mongo-configmap
@@ -48,8 +49,8 @@ spec:
         - name: mongo-db-volume1
           persistentVolumeClaim:
             claimName: pvc-mongo-claim
-# service
 ---
+# service
 apiVersion: v1
 kind: Service
 metadata:
@@ -57,58 +58,60 @@ metadata:
   namespace: bdovilla-namespace
 spec:
   selector:
-    app: mongo-server #pendiente
+    app: mongo-server 
   type: LoadBalancer
   ports:
   - port: 5302
     targetPort: 27017
-#pv
+
 ---
+#pv
 apiVersion: v1
-kind: PersistentVolume #espacio en el que vivira
+kind: PersistentVolume 
 metadata:
   name: pv-mongo-vol
   namespace: bdovilla-namespace
-spec: #Configuración de lo que va a contruir a nivel de disco
-  storageClassName: mongo  #pendiente
+spec: 
+  storageClassName: mongo  
   capacity:
-    storage: 10Gi # Capacidad
+    storage: 10Gi 
   accessModes:
-    - ReadWriteMany # Lectura y escritura
+    - ReadWriteOnce 
   hostPath:
-    path: "/mnt/mongo-vol" # Lugar donde guardara los datos
-#pvc
+    path: "/mnt/mongo-vol" 
+
 ---
+#pvc
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: pvc-mongo-claim
   namespace: bdovilla-namespace
 spec:
-  storageClassName: mongo #pendiente
+  storageClassName: mongo 
   accessModes:
-    - ReadWriteMany
-  resources: #Configuración de lo que va a reclamar
+    - ReadWriteOnce
+  resources:
     requests:
       storage: 5Gi
-#manejar su storege class
 ---
+#storageclass
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: mongo
   namespace: bdovilla-namespace
-provisioner: kubernetes.io/no-provisioner # no-provisioner -> Entorno de de infraestructura local
-reclaimPolicy: Retain # Que realizara con mis datos // preserva la integridad de mis datos
+provisioner: kubernetes.io/no-provisioner 
+reclaimPolicy: Retain 
 volumeBindingMode: WaitForFirstConsumer
-# configMap
 ---
+# configMap
 kind: ConfigMap 
 apiVersion: v1 
 metadata:
   name: mongo-configmap 
   namespace: bdovilla-namespace
-data: # Configuration values can be set as key-value properties
-  mongo.password: Eduardo93
-  mongo.user: eduardo
-  mongo.db: bdov
+data: 
+  mongo.password: "Eduardo93"
+  mongo.user: "eduardo"
+  mongo.db: "bdov"

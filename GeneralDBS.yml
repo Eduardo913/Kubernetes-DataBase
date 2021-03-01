@@ -350,7 +350,7 @@ spec:
   selector:
     app: redis-server
   ports:
-    - port: 5031 
+    - port: 5301 
       targetPort: 6379 
       protocol: TCP 
   type: LoadBalancer 

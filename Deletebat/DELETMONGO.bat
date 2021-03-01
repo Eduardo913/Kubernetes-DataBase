@@ -8,10 +8,11 @@ echo Eliminando reclamos de volumen
 kubectl delete -n bdovilla-namespace persistentvolumeclaim pvc-mongo-claim
 
 echo Eliminando volumenpersistente
-
 kubectl delete persistentvolume pv-mongo-vol
-
 
 echo Eliminando storageclass
 kubectl delete storageclass mongo
+
+echo Eliminando Configmap
+kubectl delete -n bdovilla-namespace configmap mongo-configmap
 
